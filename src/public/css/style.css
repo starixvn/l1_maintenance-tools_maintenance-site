@@ -1,0 +1,531 @@
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+    padding-top: 15px;
+    margin-bottom: 60px;
+}
+
+header {
+    background: #333;
+    color: white;
+    padding: 1rem;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+}
+
+footer {
+    background: #333;
+    color: white;
+    text-align: center;
+    padding: 0.5rem;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    height: 30px;
+    line-height: 30px;
+    font-size: 0.9em;
+    z-index: 10;
+}
+
+.game-container {
+    background: #f4f4f4;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.game-controls {
+    margin-bottom: 20px;
+}
+
+.btn {
+    background: #333;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 10px;
+}
+
+.btn:hover {
+    background: #444;
+}
+
+.game-area {
+    min-height: 300px;
+    border: 2px solid #333;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.game-score {
+    font-size: 1.2em;
+    font-weight: bold;
+}
+
+.table-responsive {
+    overflow-x: auto;
+    margin: 15px 0;
+    max-height: 75vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.game-table {
+    margin-bottom: 20px;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.game-table th,
+.game-table td {
+    padding: 8px 15px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+    line-height: 1.2;
+}
+
+.game-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+    position: sticky;
+    top: 0;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    z-index: 2;
+}
+
+.game-table tr:hover {
+    background: #f8f9fa;
+}
+
+.game-name {
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+}
+
+.bet-range {
+    color: #666;
+}
+
+/* Toggle Switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 28px;
+    margin-right: 10px;
+    vertical-align: middle;
+    z-index: 1;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    z-index: 1;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: #f57c00;
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px #f57c00;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+.schedule-status {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 10px;
+    font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .odds-table {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .game-table th,
+    .game-table td {
+        padding: 10px;
+    }
+} 
+
+/* Add these styles for database tabs */
+.database-tabs {
+    margin: 15px 0;
+    border-bottom: 2px solid #eee;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.database-tabs .tab {
+    display: inline-block;
+    padding: 8px 15px;
+    margin-bottom: -2px;
+    text-decoration: none;
+    color: #666;
+    border: 1px solid #eee;
+    border-bottom: none;
+    border-radius: 4px 4px 0 0;
+    background: #f8f9fa;
+    font-size: 0.9em;
+    white-space: nowrap;
+}
+
+.database-tabs .tab:hover {
+    background: #e9ecef;
+}
+
+.database-tabs .tab.active {
+    background: white;
+    color: #333;
+    border-bottom: 2px solid white;
+    font-weight: bold;
+}
+
+/* Add this style for game ID column */
+.game-id {
+    font-weight: 600;
+    color: #666;
+    text-align: center;
+    width: 100px;
+}
+
+/* Center align both header and data cells for Game ID column */
+.game-table th:first-child,
+.game-table td:first-child {
+    text-align: center;
+}
+
+/* Optional: Add some right padding to separate from next column */
+.game-table th:first-child,
+.game-table td:first-child {
+    padding-right: 20px;
+}
+
+/* Navigation Styles */
+.main-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    height: 60px;
+    background: #333;
+}
+
+.nav-brand a {
+    color: white;
+    font-size: 1.5em;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.nav-menu {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-item {
+    position: relative;
+    margin-left: 20px;
+}
+
+.nav-link {
+    color: white;
+    text-decoration: none;
+    padding: 10px 15px;
+    display: block;
+    transition: background-color 0.3s;
+}
+
+.nav-link:hover {
+    background-color: #444;
+}
+
+/* Dropdown styles */
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: #333;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    min-width: 200px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 1000;
+}
+
+.dropdown:hover .dropdown-menu {
+    display: block;
+}
+
+.dropdown-menu li {
+    border-top: 1px solid #444;
+}
+
+.dropdown-menu a {
+    color: white;
+    padding: 12px 15px;
+    text-decoration: none;
+    display: block;
+}
+
+.dropdown-menu a:hover {
+    background: #444;
+}
+
+/* Active state */
+.nav-link.active {
+    background: #444;
+    font-weight: bold;
+}
+
+/* Responsive navigation */
+@media (max-width: 768px) {
+    .main-nav {
+        flex-direction: column;
+        height: auto;
+        padding: 10px;
+    }
+
+    .nav-menu {
+        flex-direction: column;
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .nav-item {
+        margin: 0;
+        width: 100%;
+        text-align: center;
+    }
+
+    .dropdown-menu {
+        position: static;
+        width: 100%;
+        box-shadow: none;
+    }
+
+    .nav-link {
+        padding: 15px;
+    }
+}
+
+/* Update existing header styles */
+header {
+    background: #333;
+    color: white;
+    margin-bottom: 20px;
+}
+
+/* Container padding adjustment */
+.container {
+    padding-top: 20px;
+}
+
+/* Settings Panel */
+.settings-panel {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.settings-form {
+    max-width: 600px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Activity Log */
+.activity-log {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Statistics Panel */
+.statistics-panel {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Add these styles for bot status */
+.bot-status {
+    text-align: center;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+.status-badge.enabled {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+.status-badge.disabled {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+/* Center align the Bot Enabled column */
+.game-table th:nth-child(3),
+.game-table td:nth-child(3) {
+    text-align: center;
+}
+
+/* Status Filter Styles */
+.status-filter {
+    margin: 20px 0;
+    display: flex;
+    gap: 10px;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-decoration: none;
+    color: #666;
+    background: #f8f9fa;
+    font-size: 0.9em;
+    transition: all 0.2s;
+}
+
+.filter-btn:hover {
+    background: #e9ecef;
+}
+
+.filter-btn.active {
+    background: #333;
+    color: white;
+    border-color: #333;
+}
+
+/* Add styles for page header */
+.container h1 {
+    font-size: 1.5em;
+    margin: 0 0 15px 0;
+    padding: 0;
+    color: #333;
+}
+
+/* Filters container */
+.filters-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 15px 0;
+}
+
+/* Search filter styles */
+.search-filter {
+    flex: 0 0 300px;
+}
+
+.search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9em;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.search-input:focus {
+    border-color: #666;
+}
+
+.search-input::placeholder {
+    color: #999;
+}
+
+/* Update status filter to work with filters container */
+.status-filter {
+    display: flex;
+    gap: 10px;
+    margin: 0;  /* Remove margin as it's handled by filters-container */
+}

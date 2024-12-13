@@ -1,0 +1,23 @@
+express-project/
+├── src/
+│   ├── config/
+│   │   └── database.js
+│   ├── models/
+│   │   └── game.js
+│   ├── routes/
+│   │   └── index.js
+│   ├── controllers/
+│   │   ├── index.js
+│   │   └── game.js
+│   ├── middleware/
+│   │   └── errorHandler.js
+│   ├── views/
+│   │   ├── layouts/
+│   │   │   └── main.ejs
+│   │   └── pages/
+│   │       ├── home.ejs
+│   │       └── game.ejs
+│   └── app.js
+├── .env
+├── .gitignore
+└── package.json 

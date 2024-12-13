@@ -1,0 +1,115 @@
+<div class="container">
+    <h1>Game Management</h1>
+
+    <div class="database-tabs">
+        <% environments.forEach(env=> { %>
+            <a href="/games?env=<%= env %>&status=<%= currentStatus %>"
+                class="tab <%= currentEnv === env ? 'active' : '' %>">
+                <%= env %>
+            </a>
+            <% }); %>
+    </div>
+
+    <div class="filters-container">
+        <div class="status-filter">
+            <a href="/games?env=<%= currentEnv %>&status=all"
+                class="filter-btn <%= currentStatus === 'all' ? 'active' : '' %>">
+                All
+            </a>
+            <a href="/games?env=<%= currentEnv %>&status=enabled"
+                class="filter-btn <%= currentStatus === 'enabled' ? 'active' : '' %>">
+                Enabled
+            </a>
+            <a href="/games?env=<%= currentEnv %>&status=disabled"
+                class="filter-btn <%= currentStatus === 'disabled' ? 'active' : '' %>">
+                Disabled
+            </a>
+        </div>
+
+        <div class="search-filter">
+            <input type="text" id="gameSearch" placeholder="Search game name..." class="search-input">
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="game-table">
+            <thead>
+                <tr>
+                    <th>Game ID</th>
+                    <th>Game Name</th>
+                    <th>Bot Enabled</th>
+                    <th>Enabled Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% games.forEach(game=> { %>
+                    <tr>
+                        <td class="game-id">
+                            <%= game.gameId %>
+                        </td>
+                        <td class="game-name">
+                            <%= game.title %>
+                        </td>
+                        <td class="bot-status">
+                            <span class="status-badge <%= game.botenabled ? 'enabled' : 'disabled' %>">
+                                <%= game.botenabled ? 'Enabled' : 'Disabled' %>
+                            </span>
+                        </td>
+                        <td>
+                            <label class="switch">
+                                <input type="checkbox" data-game-id="<%= game.id %>" data-env="<%= currentEnv %>"
+                                    class="toggle-game-status" <%=game.enabled ? 'checked' : '' %>>
+                                <span class="slider round"></span>
+                            </label>
+                        </td>
+                    </tr>
+                    <% }); %>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.toggle-game-status').forEach(toggle => {
+        toggle.addEventListener('change', async function () {
+            const gameId = this.dataset.gameId;
+            const env = this.dataset.env;
+            const isDisabled = !this.checked;
+
+            try {
+                const response = await fetch(`/game/${gameId}/toggle-game-status?env=${env}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ disabled: isDisabled })
+                });
+
+                const data = await response.json();
+
+                if (data.status !== 'success') {
+                    this.checked = !this.checked;
+                    alert('Response: Failed to update game status');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                this.checked = !this.checked;
+                alert('Error: Failed to update game status');
+            }
+        });
+    });
+
+    document.getElementById('gameSearch').addEventListener('input', function (e) {
+        const searchText = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('.game-table tbody tr');
+
+        rows.forEach(row => {
+            const gameName = row.querySelector('.game-name').textContent.toLowerCase();
+            if (gameName.includes(searchText)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
