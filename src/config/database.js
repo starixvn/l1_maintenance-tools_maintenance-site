@@ -39,10 +39,10 @@ const DB_CONFIGS = {
     uri: "mongodb://lmn_backend:LmnBackend@10.10.50.12:39301,10.10.50.13:39301,10.10.50.14:39301/?replicaSet=GNLocal1&appName=userservice",
     dbName: "minigame",
   },
-  DEV: {
-    uri: "mongodb://localhost:27017/",
-    dbName: "minigame",
-  },
+  // DEV: {
+  //   uri: "mongodb://localhost:27017/",
+  //   dbName: "minigame",
+  // },
 };
 
 const connectDB = async (environment = "SG-LOCAL1") => {
