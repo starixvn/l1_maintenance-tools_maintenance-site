@@ -6,9 +6,10 @@ const {
   getGameList,
   getGameDetails,
   toggleGameStatus,
+  scheduleGameDisable,
+  disableAllGames,
+  enableAllGames,
 } = require("../controllers/game");
-const { getSettings, updateSettings } = require("../controllers/settings");
-const { getReports, getStatistics } = require("../controllers/reports");
 
 // Home routes
 router.get("/", getHome);
@@ -18,14 +19,8 @@ router.get("/games", getGameList);
 router.get("/game", getGame);
 router.get("/game/:id", getGameDetails);
 router.post("/game/:id/toggle-game-status", toggleGameStatus);
-
-// Settings routes
-router.get("/settings/general", getSettings);
-router.get("/settings/security", getSettings);
-router.post("/settings/:type", updateSettings);
-
-// Report routes
-router.get("/reports/activity", getReports);
-router.get("/reports/statistics", getStatistics);
+router.post("/game/:id/schedule-disable", scheduleGameDisable);
+router.post("/games/disable-all", disableAllGames);
+router.post("/games/enable-all", enableAllGames);
 
 module.exports = router;

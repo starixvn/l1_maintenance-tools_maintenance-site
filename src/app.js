@@ -8,12 +8,15 @@ require("dotenv").config();
 
 const indexRouter = require("./routes/index");
 const errorHandler = require("./middleware/errorHandler");
+const { initializeSchedules } = require("./controllers/game");
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 // Connect to MongoDB
-connectDB.connectDB();
+connectDB.connectDB().then(() => {
+  initializeSchedules();
+});
 
 // View engine setup
 app.set("views", path.join(__dirname, "views"));

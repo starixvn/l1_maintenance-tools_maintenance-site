@@ -29,6 +29,15 @@
         <div class="search-filter">
             <input type="text" id="gameSearch" placeholder="Search game name..." class="search-input">
         </div>
+
+        <div class="bulk-actions">
+            <button id="enableAllGames" class="btn-success">
+                Enable All Games
+            </button>
+            <button id="disableAllGames" class="btn-danger">
+                Disable All Games
+            </button>
+        </div>
     </div>
 
     <div class="table-responsive">
@@ -39,6 +48,7 @@
                     <th>Game Name</th>
                     <th>Bot Enabled</th>
                     <th>Enabled Status</th>
+                    <th>Scheduled Disable Game</th>
                 </tr>
             </thead>
             <tbody>
@@ -62,6 +72,15 @@
                                 <span class="slider round"></span>
                             </label>
                         </td>
+                        <td class="schedule-controls">
+                            <input type="time" class="schedule-disable" data-game-id="<%= game.id %>"
+                                data-env="<%= currentEnv %>" value="<%= game.scheduledDisableTime %>"
+                                title="Daily disable time">
+                            <button class="clear-schedule" data-game-id="<%= game.id %>" data-env="<%= currentEnv %>"
+                                <%=!game.scheduledDisableTime ? 'disabled' : '' %>>
+                                Clear
+                            </button>
+                        </td>
                     </tr>
                     <% }); %>
             </tbody>
@@ -77,12 +96,15 @@
             const isDisabled = !this.checked;
 
             try {
-                const response = await fetch(`/game/${gameId}/toggle-game-status?env=${env}`, {
+                const response = await fetch(`/game/${gameId}/toggle-game-status`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ disabled: isDisabled })
+                    body: JSON.stringify({
+                        disabled: isDisabled,
+                        env: env
+                    })
                 });
 
                 const data = await response.json();
@@ -112,4 +134,208 @@
             }
         });
     });
+
+    document.querySelectorAll('.schedule-disable').forEach(input => {
+        input.addEventListener('change', async function () {
+            const gameId = this.dataset.gameId;
+            const env = this.dataset.env;
+            const scheduleTime = this.value;
+            const clearButton = this.nextElementSibling;
+
+            if (!scheduleTime) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/game/${gameId}/schedule-disable`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        scheduleTime,
+                        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        env
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    clearButton.disabled = false;
+                    alert(`Game will be disabled daily at ${scheduleTime}`);
+                } else {
+                    this.value = '';
+                    alert('Failed to schedule game disable: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                this.value = '';
+                alert('Error: Failed to schedule game disable');
+            }
+        });
+    });
+
+    document.querySelectorAll('.clear-schedule').forEach(button => {
+        button.addEventListener('click', async function () {
+            const gameId = this.dataset.gameId;
+            const env = this.dataset.env;
+            const timeInput = this.previousElementSibling;
+
+            try {
+                const response = await fetch(`/game/${gameId}/schedule-disable`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        scheduleTime: '',
+                        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        env
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    timeInput.value = '';
+                    this.disabled = true;
+                    alert('Schedule cleared successfully');
+                } else {
+                    alert('Failed to clear schedule: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error: Failed to clear schedule');
+            }
+        });
+    });
+
+    document.getElementById('disableAllGames').addEventListener('click', async function () {
+        if (!confirm(`Are you sure you want to disable all games in '<%= currentEnv %>'?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/games/disable-all`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    env: '<%= currentEnv %>'
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                alert('All games have been disabled');
+                window.location.reload();
+            } else {
+                alert('Failed to disable all games: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error: Failed to disable all games');
+        }
+    });
+
+    document.getElementById('enableAllGames').addEventListener('click', async function () {
+        if (!confirm(`Are you sure you want to enable all games in '<%= currentEnv %>'?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/games/enable-all`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    env: '<%= currentEnv %>'
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                alert('All games have been enabled');
+                window.location.reload();
+            } else {
+                alert('Failed to enable all games: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error: Failed to enable all games');
+        }
+    });
 </script>
+
+<style>
+    .schedule-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .clear-schedule {
+        padding: 4px 8px;
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .clear-schedule:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+    }
+
+    .clear-schedule:hover:not(:disabled) {
+        background-color: #c82333;
+    }
+
+    .bulk-actions {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn-danger {
+        padding: 8px 16px;
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .btn-danger:hover {
+        background-color: #c82333;
+    }
+
+    .btn-success {
+        padding: 8px 16px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+    }
+
+    .filters-container {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+</style>
