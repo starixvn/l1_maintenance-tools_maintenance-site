@@ -262,7 +262,10 @@ exports.toggleGameStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { disabled } = req.body;
-    const { env } = req.query;
+    let { env } = req.query;
+    if (!env) {
+      env = req.body.env;
+    }
     const clientIP = req.clientIP;
 
     const logMessage = `[${new Date().toISOString()}] IP ${clientIP} toggled game ${id} to ${
@@ -273,7 +276,7 @@ exports.toggleGameStatus = async (req, res) => {
 
     const connection = await connectDB(env);
     const GameConfig = getGameModel(connection);
-
+    console.log("Toggling game status for game ID:", id, env);
     const gameConfig = await GameConfig.findById(id);
     if (!gameConfig) {
       return res.status(404).json({
