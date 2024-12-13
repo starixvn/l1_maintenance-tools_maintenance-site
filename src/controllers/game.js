@@ -2,6 +2,7 @@ const { connectDB, DB_CONFIGS } = require("../config/database");
 const { getModel: getGameModel } = require("../models/gameConfig");
 const { getModel: getScheduleModel } = require("../models/gameDisableSchedule");
 const schedule = require("node-schedule");
+const { sendToTelegram } = require("../utils/telegramLogger");
 
 const ENVIRONMENTS = Object.keys(DB_CONFIGS);
 const scheduleJobs = new Map(); // Store scheduled jobs in memory
@@ -66,11 +67,11 @@ exports.scheduleGameDisable = async (req, res) => {
     const { scheduleTime, timezone, env } = req.body;
     const clientIP = req.clientIP;
 
-    console.log(
-      `[${new Date().toISOString()}] IP ${clientIP} ${
-        scheduleTime ? "scheduled" : "cleared schedule for"
-      } game ${id} in ${env}${scheduleTime ? ` at ${scheduleTime}` : ""}`
-    );
+    const logMessage = `[${new Date().toISOString()}] IP ${clientIP} ${
+      scheduleTime ? "scheduled" : "cleared schedule for"
+    } game ${id} in ${env}${scheduleTime ? ` at ${scheduleTime}` : ""}`;
+    console.log(logMessage);
+    await sendToTelegram(logMessage);
 
     const connection = await connectDB(env);
     const GameConfig = getGameModel(connection);
@@ -264,11 +265,11 @@ exports.toggleGameStatus = async (req, res) => {
     const { env } = req.query;
     const clientIP = req.clientIP;
 
-    console.log(
-      `[${new Date().toISOString()}] IP ${clientIP} toggled game ${id} to ${
-        disabled ? "disabled" : "enabled"
-      } in ${env}`
-    );
+    const logMessage = `[${new Date().toISOString()}] IP ${clientIP} toggled game ${id} to ${
+      disabled ? "disabled" : "enabled"
+    } in ${env}`;
+    console.log(logMessage);
+    await sendToTelegram(logMessage);
 
     const connection = await connectDB(env);
     const GameConfig = getGameModel(connection);
@@ -307,9 +308,10 @@ exports.disableAllGames = async (req, res) => {
     const { env } = req.body;
     const clientIP = req.clientIP;
 
-    console.log(
-      `[${new Date().toISOString()}] IP ${clientIP} disabled all games in ${env}`
-    );
+    const logMessage = `[${new Date().toISOString()}] IP ${clientIP} disabled all games in ${env}`;
+
+    console.log(logMessage);
+    await sendToTelegram(logMessage);
 
     const connection = await connectDB(env);
     const GameConfig = getGameModel(connection);
@@ -343,9 +345,9 @@ exports.enableAllGames = async (req, res) => {
     const { env } = req.body;
     const clientIP = req.clientIP;
 
-    console.log(
-      `[${new Date().toISOString()}] IP ${clientIP} enabled all games in ${env}`
-    );
+    const logMessage = `[${new Date().toISOString()}] IP ${clientIP} enabled all games in ${env}`;
+    console.log(logMessage);
+    await sendToTelegram(logMessage);
 
     const connection = await connectDB(env);
     const GameConfig = getGameModel(connection);
@@ -378,9 +380,9 @@ exports.scheduleAllGames = async (req, res) => {
     const { scheduleTime, timezone, env } = req.body;
     const clientIP = req.clientIP;
 
-    console.log(
-      `[${new Date().toISOString()}] IP ${clientIP} scheduled all games in ${env} to disable at ${scheduleTime}`
-    );
+    const logMessage = `[${new Date().toISOString()}] IP ${clientIP} scheduled all games in ${env} to disable at ${scheduleTime}`;
+    console.log(logMessage);
+    await sendToTelegram(logMessage);
 
     const connection = await connectDB(env);
     const GameConfig = getGameModel(connection);
@@ -437,9 +439,9 @@ exports.clearAllSchedules = async (req, res) => {
     const { env } = req.body;
     const clientIP = req.clientIP;
 
-    console.log(
-      `[${new Date().toISOString()}] IP ${clientIP} cleared all schedules in ${env}`
-    );
+    const logMessage = `[${new Date().toISOString()}] IP ${clientIP} cleared all schedules in ${env}`;
+    console.log(logMessage);
+    await sendToTelegram(logMessage);
 
     const connection = await connectDB(env);
     const GameDisableSchedule = getScheduleModel(connection);

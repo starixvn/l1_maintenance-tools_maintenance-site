@@ -3,10 +3,6 @@ const mongoose = require("mongoose");
 const connections = {};
 
 const DB_CONFIGS = {
-  DEV: {
-    uri: "mongodb://localhost:27017/",
-    dbName: "minigame",
-  },
   "SG-LOCAL0": {
     uri: "mongodb://lmn_backend:LmnBackend@10.10.50.12:39101,10.10.50.13:39101,10.10.50.14:39101/?replicaSet=L1pLocal&appName=userservice",
     dbName: "minigame",
@@ -43,6 +39,10 @@ const DB_CONFIGS = {
     uri: "mongodb://lmn_backend:LmnBackend@10.10.50.12:39301,10.10.50.13:39301,10.10.50.14:39301/?replicaSet=GNLocal1&appName=userservice",
     dbName: "minigame",
   },
+  DEV: {
+    uri: "mongodb://localhost:27017/",
+    dbName: "minigame",
+  },
 };
 
 const connectDB = async (environment = "SG-LOCAL1") => {
@@ -63,9 +63,7 @@ const connectDB = async (environment = "SG-LOCAL1") => {
     });
 
     connections[environment] = connection;
-    console.log(
-      `MongoDB Connected to ${environment} (${config.dbName}): ${connection.host}`
-    );
+    console.log(`MongoDB Connected to ${environment} (${config.dbName})`);
     return connection;
   } catch (error) {
     console.error(`Error connecting to ${environment}:`, error.message);
