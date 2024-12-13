@@ -64,7 +64,13 @@ exports.scheduleGameDisable = async (req, res) => {
   try {
     const { id } = req.params;
     const { scheduleTime, timezone, env } = req.body;
-    console.log(req.body);
+    const clientIP = req.clientIP;
+
+    console.log(
+      `[${new Date().toISOString()}] IP ${clientIP} ${
+        scheduleTime ? "scheduled" : "cleared schedule for"
+      } game ${id} in ${env}${scheduleTime ? ` at ${scheduleTime}` : ""}`
+    );
 
     const connection = await connectDB(env);
     const GameConfig = getGameModel(connection);
@@ -170,9 +176,7 @@ exports.getGameList = async (req, res) => {
     const GameDisableSchedule = getScheduleModel(connection);
 
     let query = {};
-    if (statusFilter === "enabled") {
-      query.enabled = true;
-    } else if (statusFilter === "disabled") {
+    if (statusFilter === "disabled") {
       query.enabled = false;
     }
 
@@ -258,6 +262,13 @@ exports.toggleGameStatus = async (req, res) => {
     const { id } = req.params;
     const { disabled } = req.body;
     const { env } = req.query;
+    const clientIP = req.clientIP;
+
+    console.log(
+      `[${new Date().toISOString()}] IP ${clientIP} toggled game ${id} to ${
+        disabled ? "disabled" : "enabled"
+      } in ${env}`
+    );
 
     const connection = await connectDB(env);
     const GameConfig = getGameModel(connection);
@@ -294,6 +305,11 @@ exports.toggleGameStatus = async (req, res) => {
 exports.disableAllGames = async (req, res) => {
   try {
     const { env } = req.body;
+    const clientIP = req.clientIP;
+
+    console.log(
+      `[${new Date().toISOString()}] IP ${clientIP} disabled all games in ${env}`
+    );
 
     const connection = await connectDB(env);
     const GameConfig = getGameModel(connection);
@@ -325,6 +341,11 @@ exports.disableAllGames = async (req, res) => {
 exports.enableAllGames = async (req, res) => {
   try {
     const { env } = req.body;
+    const clientIP = req.clientIP;
+
+    console.log(
+      `[${new Date().toISOString()}] IP ${clientIP} enabled all games in ${env}`
+    );
 
     const connection = await connectDB(env);
     const GameConfig = getGameModel(connection);
@@ -347,6 +368,112 @@ exports.enableAllGames = async (req, res) => {
     res.status(500).json({
       status: "error",
       message: "Error enabling all games",
+      error: error.message,
+    });
+  }
+};
+
+exports.scheduleAllGames = async (req, res) => {
+  try {
+    const { scheduleTime, timezone, env } = req.body;
+    const clientIP = req.clientIP;
+
+    console.log(
+      `[${new Date().toISOString()}] IP ${clientIP} scheduled all games in ${env} to disable at ${scheduleTime}`
+    );
+
+    const connection = await connectDB(env);
+    const GameConfig = getGameModel(connection);
+    const GameDisableSchedule = getScheduleModel(connection);
+
+    // Get all games
+    const games = await GameConfig.find();
+
+    // Deactivate all existing schedules
+    await GameDisableSchedule.updateMany(
+      { environment: env },
+      { isActive: false }
+    );
+
+    // Create new schedules for all games
+    for (const game of games) {
+      // Cancel existing job if any
+      const jobKey = `${env}-${game._id}`;
+      if (scheduleJobs.has(jobKey)) {
+        scheduleJobs.get(jobKey).cancel();
+        scheduleJobs.delete(jobKey);
+      }
+
+      // Create new schedule
+      await GameDisableSchedule.create({
+        gameId: game._id,
+        environment: env,
+        scheduleTime,
+        timezone,
+        isActive: true,
+      });
+
+      // Set up new schedule job
+      const rule = createScheduleRule(scheduleTime, timezone);
+      setupScheduleJob(rule, game._id, env, jobKey);
+    }
+
+    res.json({
+      status: "success",
+      message: `All games scheduled to disable daily at ${scheduleTime}`,
+    });
+  } catch (error) {
+    console.error("Error scheduling all games:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Error scheduling all games",
+      error: error.message,
+    });
+  }
+};
+
+exports.clearAllSchedules = async (req, res) => {
+  try {
+    const { env } = req.body;
+    const clientIP = req.clientIP;
+
+    console.log(
+      `[${new Date().toISOString()}] IP ${clientIP} cleared all schedules in ${env}`
+    );
+
+    const connection = await connectDB(env);
+    const GameDisableSchedule = getScheduleModel(connection);
+
+    // Get all active schedules
+    const activeSchedules = await GameDisableSchedule.find({
+      environment: env,
+      isActive: true,
+    });
+
+    // Cancel all jobs
+    for (const schedule of activeSchedules) {
+      const jobKey = `${env}-${schedule.gameId}`;
+      if (scheduleJobs.has(jobKey)) {
+        scheduleJobs.get(jobKey).cancel();
+        scheduleJobs.delete(jobKey);
+      }
+    }
+
+    // Deactivate all schedules
+    await GameDisableSchedule.updateMany(
+      { environment: env },
+      { isActive: false }
+    );
+
+    res.json({
+      status: "success",
+      message: "All schedules cleared successfully",
+    });
+  } catch (error) {
+    console.error("Error clearing all schedules:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Error clearing all schedules",
       error: error.message,
     });
   }

@@ -9,7 +9,10 @@ const {
   scheduleGameDisable,
   disableAllGames,
   enableAllGames,
+  scheduleAllGames,
+  clearAllSchedules,
 } = require("../controllers/game");
+const getClientIP = require("../middleware/getClientIP");
 
 // Home routes
 router.get("/", getHome);
@@ -18,9 +21,11 @@ router.get("/", getHome);
 router.get("/games", getGameList);
 router.get("/game", getGame);
 router.get("/game/:id", getGameDetails);
-router.post("/game/:id/toggle-game-status", toggleGameStatus);
-router.post("/game/:id/schedule-disable", scheduleGameDisable);
-router.post("/games/disable-all", disableAllGames);
-router.post("/games/enable-all", enableAllGames);
+router.post("/game/:id/toggle-game-status", getClientIP, toggleGameStatus);
+router.post("/game/:id/schedule-disable", getClientIP, scheduleGameDisable);
+router.post("/games/disable-all", getClientIP, disableAllGames);
+router.post("/games/enable-all", getClientIP, enableAllGames);
+router.post("/games/schedule-all", getClientIP, scheduleAllGames);
+router.post("/games/clear-all-schedules", getClientIP, clearAllSchedules);
 
 module.exports = router;

@@ -16,10 +16,6 @@
                 class="filter-btn <%= currentStatus === 'all' ? 'active' : '' %>">
                 All
             </a>
-            <a href="/games?env=<%= currentEnv %>&status=enabled"
-                class="filter-btn <%= currentStatus === 'enabled' ? 'active' : '' %>">
-                Enabled
-            </a>
             <a href="/games?env=<%= currentEnv %>&status=disabled"
                 class="filter-btn <%= currentStatus === 'disabled' ? 'active' : '' %>">
                 Disabled
@@ -31,6 +27,15 @@
         </div>
 
         <div class="bulk-actions">
+            <div class="schedule-all-container">
+                <input type="time" id="scheduleAllGames" title="Schedule disable time for all games">
+                <button id="applyScheduleAll" class="btn-primary">
+                    Apply Schedule
+                </button>
+                <button id="clearAllSchedules" class="btn-warning">
+                    Clear All Schedules
+                </button>
+            </div>
             <button id="enableAllGames" class="btn-success">
                 Enable All Games
             </button>
@@ -44,10 +49,10 @@
         <table class="game-table">
             <thead>
                 <tr>
-                    <th>Game ID</th>
-                    <th>Game Name</th>
-                    <th>Bot Enabled</th>
-                    <th>Enabled Status</th>
+                    <th class="sortable" data-sort="gameId">Game ID <span class="sort-icon">↕</span></th>
+                    <th class="sortable" data-sort="title">Game Name <span class="sort-icon">↕</span></th>
+                    <th class="sortable" data-sort="botenabled">Bot Enabled <span class="sort-icon">↕</span></th>
+                    <th class="sortable" data-sort="enabled">Enabled Status <span class="sort-icon">↕</span></th>
                     <th>Scheduled Disable Game</th>
                 </tr>
             </thead>
@@ -88,12 +93,93 @@
     </div>
 </div>
 
+<div id="toast-container"></div>
+
+<div id="confirm-dialog" class="confirm-dialog">
+    <div class="confirm-content">
+        <p id="confirm-message"></p>
+        <div class="confirm-buttons">
+            <button id="confirm-cancel" class="btn-secondary">Cancel</button>
+            <button id="confirm-ok" class="btn-primary">OK</button>
+        </div>
+    </div>
+</div>
+
 <script>
+    // Sorting functionality
+    let currentSort = {
+        column: 'gameId',
+        direction: 'asc'
+    };
+
+    function sortTable(column) {
+        const tbody = document.querySelector('.game-table tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const headers = document.querySelectorAll('.sortable');
+
+        // Update sort direction
+        if (currentSort.column === column) {
+            currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.column = column;
+            currentSort.direction = 'asc';
+        }
+
+        // Update header classes
+        headers.forEach(header => {
+            header.classList.remove('sort-asc', 'sort-desc');
+            if (header.dataset.sort === column) {
+                header.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+            }
+        });
+
+        // Sort rows
+        rows.sort((a, b) => {
+            let aValue, bValue;
+
+            switch (column) {
+                case 'gameId':
+                    aValue = parseInt(a.querySelector('.game-id').textContent);
+                    bValue = parseInt(b.querySelector('.game-id').textContent);
+                    break;
+                case 'title':
+                    aValue = a.querySelector('.game-name').textContent;
+                    bValue = b.querySelector('.game-name').textContent;
+                    break;
+                case 'botenabled':
+                    aValue = a.querySelector('.bot-status .status-badge').classList.contains('enabled');
+                    bValue = b.querySelector('.bot-status .status-badge').classList.contains('enabled');
+                    break;
+                case 'enabled':
+                    aValue = a.querySelector('.toggle-game-status').checked;
+                    bValue = b.querySelector('.toggle-game-status').checked;
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (currentSort.direction === 'asc') {
+                return aValue > bValue ? 1 : -1;
+            } else {
+                return aValue < bValue ? 1 : -1;
+            }
+        });
+
+        // Reorder rows
+        rows.forEach(row => tbody.appendChild(row));
+    }
+
+    // Add click handlers to sortable headers
+    document.querySelectorAll('.sortable').forEach(header => {
+        header.addEventListener('click', () => sortTable(header.dataset.sort));
+    });
+
     document.querySelectorAll('.toggle-game-status').forEach(toggle => {
         toggle.addEventListener('change', async function () {
             const gameId = this.dataset.gameId;
             const env = this.dataset.env;
             const isDisabled = !this.checked;
+            const gameName = this.closest('tr').querySelector('.game-name').textContent.trim();
 
             try {
                 const response = await fetch(`/game/${gameId}/toggle-game-status`, {
@@ -111,12 +197,14 @@
 
                 if (data.status !== 'success') {
                     this.checked = !this.checked;
-                    alert('Response: Failed to update game status');
+                    showToast(`Failed to update status for game ${gameName}`, 'error');
+                } else {
+                    showToast(`Game ${gameName} ${!isDisabled ? 'enabled' : 'disabled'} successfully`);
                 }
             } catch (error) {
                 console.error('Error:', error);
                 this.checked = !this.checked;
-                alert('Error: Failed to update game status');
+                showToast(`Error: Failed to update status for game ${gameName}`, 'error');
             }
         });
     });
@@ -141,6 +229,7 @@
             const env = this.dataset.env;
             const scheduleTime = this.value;
             const clearButton = this.nextElementSibling;
+            const gameName = this.closest('tr').querySelector('.game-name').textContent.trim();
 
             if (!scheduleTime) {
                 return;
@@ -163,15 +252,15 @@
 
                 if (data.status === 'success') {
                     clearButton.disabled = false;
-                    alert(`Game will be disabled daily at ${scheduleTime}`);
+                    showToast(`Game ${gameName} will be disabled daily at ${scheduleTime}`);
                 } else {
                     this.value = '';
-                    alert('Failed to schedule game disable: ' + data.message);
+                    showToast(`Failed to schedule disable for game ${gameName}: ${data.message}`, 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
                 this.value = '';
-                alert('Error: Failed to schedule game disable');
+                showToast(`Error: Failed to schedule disable for game ${gameName}`, 'error');
             }
         });
     });
@@ -181,6 +270,7 @@
             const gameId = this.dataset.gameId;
             const env = this.dataset.env;
             const timeInput = this.previousElementSibling;
+            const gameName = this.closest('tr').querySelector('.game-name').textContent.trim();
 
             try {
                 const response = await fetch(`/game/${gameId}/schedule-disable`, {
@@ -200,19 +290,42 @@
                 if (data.status === 'success') {
                     timeInput.value = '';
                     this.disabled = true;
-                    alert('Schedule cleared successfully');
+                    showToast(`Schedule cleared successfully for game ${gameName}`);
                 } else {
-                    alert('Failed to clear schedule: ' + data.message);
+                    showToast(`Failed to clear schedule for game ${gameName}: ${data.message}`, 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error: Failed to clear schedule');
+                showToast(`Error: Failed to clear schedule for game ${gameName}`, 'error');
             }
         });
     });
 
+    function showConfirm(message) {
+        return new Promise((resolve) => {
+            const dialog = document.getElementById('confirm-dialog');
+            const messageEl = document.getElementById('confirm-message');
+            const okButton = document.getElementById('confirm-ok');
+            const cancelButton = document.getElementById('confirm-cancel');
+
+            messageEl.textContent = message;
+            dialog.style.display = 'flex';
+
+            okButton.onclick = () => {
+                dialog.style.display = 'none';
+                resolve(true);
+            };
+
+            cancelButton.onclick = () => {
+                dialog.style.display = 'none';
+                resolve(false);
+            };
+        });
+    }
+
     document.getElementById('disableAllGames').addEventListener('click', async function () {
-        if (!confirm(`Are you sure you want to disable all games in '<%= currentEnv %>'?`)) {
+        const confirmed = await showConfirm(`Are you sure you want to disable all games in '<%= currentEnv %>'?`);
+        if (!confirmed) {
             return;
         }
 
@@ -230,19 +343,20 @@
             const data = await response.json();
 
             if (data.status === 'success') {
-                alert('All games have been disabled');
+                showToast('All games have been disabled');
                 window.location.reload();
             } else {
-                alert('Failed to disable all games: ' + data.message);
+                showToast('Failed to disable all games: ' + data.message, 'error');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Error: Failed to disable all games');
+            showToast('Error: Failed to disable all games', 'error');
         }
     });
 
     document.getElementById('enableAllGames').addEventListener('click', async function () {
-        if (!confirm(`Are you sure you want to enable all games in '<%= currentEnv %>'?`)) {
+        const confirmed = await showConfirm(`Are you sure you want to enable all games in '<%= currentEnv %>'?`);
+        if (!confirmed) {
             return;
         }
 
@@ -260,16 +374,104 @@
             const data = await response.json();
 
             if (data.status === 'success') {
-                alert('All games have been enabled');
+                showToast('All games have been enabled');
                 window.location.reload();
             } else {
-                alert('Failed to enable all games: ' + data.message);
+                showToast('Failed to enable all games: ' + data.message, 'error');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Error: Failed to enable all games');
+            showToast('Error: Failed to enable all games', 'error');
         }
     });
+
+    document.getElementById('applyScheduleAll').addEventListener('click', async function () {
+        const scheduleTime = document.getElementById('scheduleAllGames').value;
+
+        if (!scheduleTime) {
+            showToast('Please select a time first', 'error');
+            return;
+        }
+
+        const confirmed = await showConfirm(`Are you sure you want to schedule all games in '<%= currentEnv %>' to disable at ${scheduleTime}?`);
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/games/schedule-all`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    scheduleTime,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    env: '<%= currentEnv %>'
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                showToast(`All games scheduled to disable daily at ${scheduleTime}`);
+                window.location.reload();
+            } else {
+                showToast('Failed to schedule all games: ' + data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('Error: Failed to schedule all games', 'error');
+        }
+    });
+
+    document.getElementById('clearAllSchedules').addEventListener('click', async function () {
+        const confirmed = await showConfirm(`Are you sure you want to clear all schedules in '<%= currentEnv %>'?`);
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/games/clear-all-schedules`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    env: '<%= currentEnv %>'
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                showToast('All schedules have been cleared');
+                window.location.reload();
+            } else {
+                showToast('Failed to clear schedules: ' + data.message, 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('Error: Failed to clear schedules', 'error');
+        }
+    });
+
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+
+        const container = document.getElementById('toast-container');
+        container.appendChild(toast);
+
+        // Remove toast after 3 seconds
+        setTimeout(() => {
+            toast.style.animation = 'fadeOut 0.3s ease-in-out';
+            setTimeout(() => {
+                container.removeChild(toast);
+            }, 300);
+        }, 3000);
+    }
 </script>
 
 <style>
@@ -278,6 +480,7 @@
         gap: 8px;
         align-items: center;
         justify-content: center;
+        min-width: 200px;
     }
 
     .clear-schedule {
@@ -337,5 +540,210 @@
         gap: 16px;
         align-items: center;
         margin-bottom: 20px;
+    }
+
+    #toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+    }
+
+    .toast {
+        padding: 12px 20px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        color: white;
+        font-weight: 500;
+        min-width: 250px;
+        animation: slideIn 0.3s ease-in-out;
+    }
+
+    .toast.success {
+        background-color: #28a745;
+    }
+
+    .toast.error {
+        background-color: #dc3545;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes fadeOut {
+        from {
+            opacity: 1;
+        }
+
+        to {
+            opacity: 0;
+        }
+    }
+
+    .schedule-all-container {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding-right: 16px;
+        border-right: 1px solid #ddd;
+    }
+
+    .btn-primary {
+        padding: 8px 16px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    #scheduleAllGames {
+        padding: 6px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        width: 120px;
+        height: 23px;
+    }
+
+    .sortable {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .sortable:hover {
+        background-color: #f0f0f0;
+    }
+
+    .sort-icon {
+        display: inline-block;
+        margin-left: 5px;
+        opacity: 0.3;
+    }
+
+    .sort-asc .sort-icon {
+        opacity: 1;
+        transform: rotate(180deg);
+    }
+
+    .sort-desc .sort-icon {
+        opacity: 1;
+        transform: rotate(0deg);
+    }
+
+    .game-table td,
+    .game-table th {
+        padding: 6px 16px;
+        height: 35px;
+        vertical-align: middle;
+    }
+
+    .game-table tbody tr {
+        border-bottom: 1px solid #eee;
+    }
+
+    .game-table thead th {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+        height: 35px;
+    }
+
+    .game-id {
+        font-family: monospace;
+        font-size: 14px;
+    }
+
+    .game-name {
+        font-weight: 500;
+    }
+
+    .confirm-dialog {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1001;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .confirm-content {
+        background-color: white;
+        padding: 24px;
+        border-radius: 8px;
+        min-width: 300px;
+        max-width: 400px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .confirm-buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 20px;
+    }
+
+    .btn-secondary {
+        padding: 8px 16px;
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+    }
+
+    .btn-warning {
+        padding: 8px 16px;
+        background-color: #ffc107;
+        color: #000;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .btn-warning:hover {
+        background-color: #e0a800;
+    }
+
+    .search-filter {
+        width: 120px;
+    }
+
+    .search-input {
+        width: 180px;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 13px;
+        height: 23px;
+    }
+
+    .search-input:focus {
+        outline: none;
+        border-color: #80bdff;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, .25);
     }
 </style>
