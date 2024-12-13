@@ -14,8 +14,13 @@ const {
 } = require("../controllers/game");
 const getClientIP = require("../middleware/getClientIP");
 
+// Health check
+router.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 // Home routes
-router.get("/", getHome);
+router.get("/", getGameList);
 
 // Game routes
 router.get("/games", getGameList);

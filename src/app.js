@@ -12,7 +12,7 @@ const { initializeSchedules } = require("./controllers/game");
 const { initBot } = require("./utils/telegramLogger");
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = 5000;
 
 // Connect to MongoDB
 connectDB.connectDB().then(() => {
