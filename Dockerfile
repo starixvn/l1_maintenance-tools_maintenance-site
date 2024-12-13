@@ -16,5 +16,9 @@ COPY . .
 # Expose the port the app runs on
 EXPOSE 5000
 
+# Add health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1
+
 # Command to run the application
 CMD ["npm", "start"] 
