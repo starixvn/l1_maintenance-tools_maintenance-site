@@ -3,14 +3,17 @@ body {
     line-height: 1.6;
     margin: 0;
     padding: 0;
+    overflow: hidden;
 }
 
 .container {
-    max-width: 1200px;
+    width: 90%;
+    max-width: 90%;
     margin: 0 auto;
     padding: 1rem;
     padding-top: 15px;
     margin-bottom: 60px;
+    margin-left: 10px;
 }
 
 header {
@@ -79,7 +82,7 @@ footer {
 .table-responsive {
     overflow-x: auto;
     margin: 15px 0;
-    max-height: 75vh;
+    max-height: 60vh;
     overflow-y: auto;
     position: relative;
 }
