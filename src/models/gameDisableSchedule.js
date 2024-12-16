@@ -23,6 +23,14 @@ const gameDisableScheduleSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    notes: {
+      type: String,
+      default: "",
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
   },
   {
     collection: "game_disable_schedules",

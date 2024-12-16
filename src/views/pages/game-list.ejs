@@ -30,7 +30,7 @@
             <div class="schedule-all-container">
                 <input type="time" id="scheduleAllGames" title="Schedule disable time for all games">
                 <button id="applyScheduleAll" class="btn-primary">
-                    Apply Schedule
+                    Set Disabled Schedule All Games
                 </button>
                 <button id="clearAllSchedules" class="btn-warning">
                     Clear All Schedules
@@ -52,8 +52,9 @@
                     <th class="sortable" data-sort="gameId">Game ID <span class="sort-icon">↕</span></th>
                     <th class="sortable" data-sort="title">Game Name <span class="sort-icon">↕</span></th>
                     <th class="sortable" data-sort="botenabled">Bot Enabled <span class="sort-icon">↕</span></th>
-                    <th class="sortable" data-sort="enabled">Enabled Status <span class="sort-icon">↕</span></th>
+                    <th class="sortable" data-sort="enabled">Game Status <span class="sort-icon">↕</span></th>
                     <th>Scheduled Disable Game</th>
+                    <th>Notes</th>
                 </tr>
             </thead>
             <tbody>
@@ -86,6 +87,9 @@
                                 Clear
                             </button>
                         </td>
+                        <td class="game-notes">
+                            <%= game.notes || '' %>
+                        </td>
                     </tr>
                     <% }); %>
             </tbody>
@@ -101,6 +105,18 @@
         <div class="confirm-buttons">
             <button id="confirm-cancel" class="btn-secondary">Cancel</button>
             <button id="confirm-ok" class="btn-primary">OK</button>
+        </div>
+    </div>
+</div>
+
+<div id="notes-dialog" class="confirm-dialog">
+    <div class="confirm-content">
+        <h3>Add Notes</h3>
+        <textarea id="schedule-notes-input" placeholder="Please notes the reason why you set disabled schedule"
+            rows="3"></textarea>
+        <div class="confirm-buttons">
+            <button id="notes-cancel" class="btn-secondary">Cancel</button>
+            <button id="notes-save" class="btn-primary">Save</button>
         </div>
     </div>
 </div>
@@ -228,40 +244,75 @@
             const gameId = this.dataset.gameId;
             const env = this.dataset.env;
             const scheduleTime = this.value;
-            const clearButton = this.nextElementSibling;
             const gameName = this.closest('tr').querySelector('.game-name').textContent.trim();
+            const notesCell = this.closest('tr').querySelector('.game-notes');
+            const timeInput = this; // Store reference to time input
 
             if (!scheduleTime) {
                 return;
             }
 
-            try {
-                const response = await fetch(`/game/${gameId}/schedule-disable`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        scheduleTime,
-                        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                        env
-                    })
-                });
+            // Show notes dialog
+            const dialog = document.getElementById('notes-dialog');
+            const notesInput = document.getElementById('schedule-notes-input');
+            const saveButton = document.getElementById('notes-save');
+            const cancelButton = document.getElementById('notes-cancel');
 
-                const data = await response.json();
+            dialog.style.display = 'flex';
+            notesInput.value = ''; // Clear previous notes
+            notesInput.focus();
 
-                if (data.status === 'success') {
-                    clearButton.disabled = false;
-                    showToast(`Game ${gameName} will be disabled daily at ${scheduleTime}`);
-                } else {
-                    this.value = '';
-                    showToast(`Failed to schedule disable for game ${gameName}: ${data.message}`, 'error');
+            const handleSave = async () => {
+                const userNotes = notesInput.value.trim();
+                dialog.style.display = 'none';
+
+                try {
+                    const response = await fetch(`/game/${gameId}/schedule-disable`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            scheduleTime,
+                            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                            env,
+                            userNotes
+                        })
+                    });
+
+                    const data = await response.json();
+                    console.log(data)
+                    if (data.status === 'success') {
+                        const clearButton = timeInput.nextElementSibling;
+                        clearButton.disabled = false;
+                        notesCell.textContent = data.data.notes;
+                        showToast(`Game ${gameName} will be disabled daily at ${scheduleTime}`);
+                    } else {
+                        timeInput.value = '';
+                        showToast(`Failed to schedule disable for game ${gameName}: ${data.message}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    timeInput.value = '';
+                    showToast(`Error: Failed to schedule disable for game ${gameName}`, 'error');
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                this.value = '';
-                showToast(`Error: Failed to schedule disable for game ${gameName}`, 'error');
-            }
+            };
+
+            const handleCancel = () => {
+                dialog.style.display = 'none';
+                timeInput.value = ''; // Clear the time input
+            };
+
+            saveButton.onclick = handleSave;
+            cancelButton.onclick = handleCancel;
+
+            // Handle Enter key in textarea
+            notesInput.onkeydown = (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSave();
+                }
+            };
         });
     });
 
@@ -271,6 +322,7 @@
             const env = this.dataset.env;
             const timeInput = this.previousElementSibling;
             const gameName = this.closest('tr').querySelector('.game-name').textContent.trim();
+            const notesCell = this.closest('tr').querySelector('.game-notes');
 
             try {
                 const response = await fetch(`/game/${gameId}/schedule-disable`, {
@@ -281,7 +333,7 @@
                     body: JSON.stringify({
                         scheduleTime: '',
                         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                        env
+                        env,
                     })
                 });
 
@@ -290,6 +342,7 @@
                 if (data.status === 'success') {
                     timeInput.value = '';
                     this.disabled = true;
+                    notesCell.textContent = '';
                     showToast(`Schedule cleared successfully for game ${gameName}`);
                 } else {
                     showToast(`Failed to clear schedule for game ${gameName}: ${data.message}`, 'error');
@@ -393,36 +446,68 @@
             return;
         }
 
-        const confirmed = await showConfirm(`Are you sure you want to schedule all games in '<%= currentEnv %>' to disable at ${scheduleTime}?`);
-        if (!confirmed) {
-            return;
-        }
+        // Show notes dialog
+        const dialog = document.getElementById('notes-dialog');
+        const notesInput = document.getElementById('schedule-notes-input');
+        const saveButton = document.getElementById('notes-save');
+        const cancelButton = document.getElementById('notes-cancel');
 
-        try {
-            const response = await fetch(`/games/schedule-all`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    scheduleTime,
-                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                    env: '<%= currentEnv %>'
-                })
-            });
+        dialog.style.display = 'flex';
+        notesInput.value = ''; // Clear previous notes
+        notesInput.focus();
 
-            const data = await response.json();
+        const handleSave = async () => {
+            const userNotes = notesInput.value.trim();
+            dialog.style.display = 'none';
 
-            if (data.status === 'success') {
-                showToast(`All games scheduled to disable daily at ${scheduleTime}`);
-                window.location.reload();
-            } else {
-                showToast('Failed to schedule all games: ' + data.message, 'error');
+            const confirmed = await showConfirm(`Are you sure you want to schedule all games in '<%= currentEnv %>' to disable at ${scheduleTime}?`);
+            if (!confirmed) {
+                return;
             }
-        } catch (error) {
-            console.error('Error:', error);
-            showToast('Error: Failed to schedule all games', 'error');
-        }
+
+            try {
+                const response = await fetch(`/games/schedule-all`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        scheduleTime,
+                        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        env: '<%= currentEnv %>',
+                        userNotes
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    showToast(`All games scheduled to disable daily at ${scheduleTime}`);
+                    window.location.reload();
+                } else {
+                    showToast('Failed to schedule all games: ' + data.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error: Failed to schedule all games', 'error');
+            }
+        };
+
+        const handleCancel = () => {
+            dialog.style.display = 'none';
+            document.getElementById('scheduleAllGames').value = ''; // Clear the time input
+        };
+
+        saveButton.onclick = handleSave;
+        cancelButton.onclick = handleCancel;
+
+        // Handle Enter key in textarea
+        notesInput.onkeydown = (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSave();
+            }
+        };
     });
 
     document.getElementById('clearAllSchedules').addEventListener('click', async function () {
@@ -745,5 +830,40 @@
         outline: none;
         border-color: #80bdff;
         box-shadow: 0 0 0 2px rgba(0, 123, 255, .25);
+    }
+
+    .game-notes {
+        font-weight: 500;
+        color: #333;
+        max-width: 200px;
+        padding: 6px 16px;
+        height: 25px;
+        vertical-align: middle;
+    }
+
+    .table-responsive {
+        overflow-x: auto;
+        margin: 15px 0;
+        overflow-y: auto;
+        position: relative;
+        width: 100%;
+    }
+
+    .container {
+        width: 100%;
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 1rem;
+        padding-top: 15px;
+        margin-bottom: 60px;
+    }
+
+    .game-table {
+        width: 100%;
+        margin-bottom: 20px;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 </style>

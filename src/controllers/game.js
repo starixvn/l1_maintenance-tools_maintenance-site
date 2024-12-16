@@ -64,20 +64,14 @@ const setupScheduleJob = (rule, id, env, jobKey) => {
 exports.scheduleGameDisable = async (req, res) => {
   try {
     const { id } = req.params;
-    const { scheduleTime, timezone, env } = req.body;
+    const { scheduleTime, timezone, env, userNotes } = req.body;
     const clientIP = req.clientIP;
-
-    const logMessage = `[${new Date().toISOString()}] IP ${clientIP} ${
-      scheduleTime ? "scheduled" : "cleared schedule for"
-    } game ${id} in ${env}${scheduleTime ? ` at ${scheduleTime}` : ""}`;
-    console.log(logMessage);
-    await sendToTelegram(logMessage);
 
     const connection = await connectDB(env);
     const GameConfig = getGameModel(connection);
     const GameDisableSchedule = getScheduleModel(connection);
 
-    // Validate game exists
+    // Validate game exists and get game name
     const gameConfig = await GameConfig.findById(id);
     if (!gameConfig) {
       return res.status(404).json({
@@ -85,6 +79,29 @@ exports.scheduleGameDisable = async (req, res) => {
         message: "Game not found",
       });
     }
+
+    // Format the current time with AM/PM
+    const currentTime = new Date().toLocaleString("en-US", {
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      hour12: true,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    });
+
+    const notes = scheduleTime
+      ? `Set on ${currentTime}${userNotes ? ` - ${userNotes}` : ""}`
+      : "";
+
+    const logMessage = `[${new Date().toISOString()}] IP ${clientIP} ${
+      scheduleTime ? "scheduled" : "cleared schedule for"
+    } game ${gameConfig.name} (GameId: ${gameConfig.gameId}) in ${env}${
+      scheduleTime ? ` at ${scheduleTime}` : ""
+    }`;
+    console.log(logMessage);
+    await sendToTelegram(logMessage);
 
     const jobKey = `${env}-${id}`;
 
@@ -99,13 +116,14 @@ exports.scheduleGameDisable = async (req, res) => {
       });
     }
 
-    // Create new schedule in database
+    // Create new schedule in database with notes
     await GameDisableSchedule.create({
       gameId: id,
       environment: env,
       scheduleTime,
       timezone,
       isActive: true,
+      notes,
     });
 
     // Set up new schedule
@@ -115,7 +133,7 @@ exports.scheduleGameDisable = async (req, res) => {
     res.json({
       status: "success",
       message: `Game scheduled to disable daily at ${scheduleTime}`,
-      data: { scheduleTime },
+      data: { scheduleTime, notes },
     });
   } catch (error) {
     console.error("Error scheduling game disable:", error);
@@ -191,13 +209,14 @@ exports.getGameList = async (req, res) => {
       isActive: true,
     });
 
-    // Create a map of game ID to schedule time
-    const scheduleMap = new Map(
-      schedules.map((schedule) => [
-        schedule.gameId.toString(),
-        schedule.scheduleTime,
-      ])
-    );
+    // Create maps for schedule time and notes
+    const scheduleMap = new Map();
+    const notesMap = new Map();
+    schedules.forEach((schedule) => {
+      const gameId = schedule.gameId.toString();
+      scheduleMap.set(gameId, schedule.scheduleTime);
+      notesMap.set(gameId, schedule.notes);
+    });
 
     const formattedGames = gameConfigs.map((game) => ({
       id: game._id,
@@ -207,6 +226,7 @@ exports.getGameList = async (req, res) => {
       enabled: game.enabled,
       type: game.type,
       scheduledDisableTime: scheduleMap.get(game._id.toString()) || "",
+      notes: notesMap.get(game._id.toString()) || "",
     }));
 
     res.render("pages/game-list", {
@@ -380,8 +400,21 @@ exports.enableAllGames = async (req, res) => {
 
 exports.scheduleAllGames = async (req, res) => {
   try {
-    const { scheduleTime, timezone, env } = req.body;
+    const { scheduleTime, timezone, env, userNotes } = req.body;
     const clientIP = req.clientIP;
+
+    // Format the current time with AM/PM
+    const currentTime = new Date().toLocaleString("en-US", {
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
+      hour12: true,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    });
+
+    const notes = `Set on ${currentTime}${userNotes ? ` - ${userNotes}` : ""}`;
 
     const logMessage = `[${new Date().toISOString()}] IP ${clientIP} scheduled all games in ${env} to disable at ${scheduleTime}`;
     console.log(logMessage);
@@ -416,6 +449,7 @@ exports.scheduleAllGames = async (req, res) => {
         scheduleTime,
         timezone,
         isActive: true,
+        notes,
       });
 
       // Set up new schedule job

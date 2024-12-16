@@ -529,3 +529,49 @@ header {
     gap: 10px;
     margin: 0;  /* Remove margin as it's handled by filters-container */
 }
+
+/* Notes Dialog Styles */
+#notes-dialog .confirm-content {
+    width: 400px;
+    padding: 20px;
+}
+
+#notes-dialog h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+}
+
+#schedule-notes-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+#schedule-notes-input:focus {
+    outline: none;
+    border-color: #80bdff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, .25);
+}
+
+#schedule-notes-input::placeholder {
+    color: #999;
+}
+
+.confirm-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
